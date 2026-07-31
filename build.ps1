@@ -60,8 +60,14 @@ function SaleDate($s){ $s=Norm $s
 # queries Day ja vem yyyy-mm-dd (aceita dd/mm/yyyy por seguranca)
 function QDay($s){ $s=Norm $s; if($s -match '^\d{4}-\d{2}-\d{2}'){ return $s.Substring(0,10) }
   if($s -match '^(\d{1,2})/(\d{1,2})/(\d{4})'){ return ('{0}-{1:d2}-{2:d2}' -f $Matches[3],[int]$Matches[2],[int]$Matches[1]) }; return '' }
-# valores de utm com macro nao-resolvida ({{...}}) = rastreio quebrado
-function CleanUtm($s){ $s=Norm $s; if($s -eq '' -or $s -like '*{{*'){ return '' }; return $s }
+# valores de utm com macro nao-resolvida ({{...}}) ou erro de planilha (#REF!/#N/A) = invalido
+function CleanUtm($s){ $s=Norm $s; if($s -eq '' -or $s -like '*{{*' -or $s -like '#*'){ return '' }; return $s }
+# coalesce: prefere o 1o indice (conjunto resolvido), cai no 2o (UTM cru); ja limpa
+function Coa($r,$iA,$iB){
+  $a=''; if($iA -ge 0 -and $r.Count -gt $iA){ $a=CleanUtm $r[$iA] }
+  if($a -ne ''){ return $a }
+  $b=''; if($iB -ge 0 -and $r.Count -gt $iB){ $b=CleanUtm $r[$iB] }
+  return $b }
 
 # =====================================================================
 #  1) VENDAS: filtra produto DNA + status pago; separa FB x organico
@@ -73,8 +79,13 @@ Get-Sheet $META_ID   $META_GID   $mCsv
 
 $v = Read-Csv $vCsv; $vh=$v[0]; $vd=$v[1..($v.Count-1)]
 $V_DATE=HdrLike $vh 'data'; $V_PROD=HdrLike $vh 'produto'; $V_STAT=HdrLike $vh 'status'; $V_FAT=HdrLike $vh 'faturamento'
-$V_SRC=HdrLike $vh '*source*'; $V_MED=HdrLike $vh '*medium*'; $V_CAMP=HdrLike $vh '*campaign*'; $V_CONT=HdrLike $vh '*content*'
-foreach($pair in @(@('Data',$V_DATE),@('Produto',$V_PROD),@('Status',$V_STAT),@('Faturamento',$V_FAT),@('Source',$V_SRC),@('Campaign',$V_CAMP))){ if($pair[1] -lt 0){ throw ("Vendas: coluna nao encontrada: "+$pair[0]) } }
+# A planilha tem DOIS conjuntos de UTM: o cru "UTM Source/Medium/Campaign/Content" (as vezes
+# vazio nas vendas recentes) e o RESOLVIDO "Source/Campaign/Medium/content" (mais completo).
+# Prefere o resolvido, cai no cru. HdrLike exato ('source') pega "Source"; 'utm source' pega o cru.
+$V_SRC =HdrLike $vh 'utm source'; $V_MED =HdrLike $vh 'utm medium'; $V_CAMP =HdrLike $vh 'utm campaign'; $V_CONT =HdrLike $vh 'utm content'
+$V_SRC2=HdrLike $vh 'source';     $V_MED2=HdrLike $vh 'medium';     $V_CAMP2=HdrLike $vh 'campaign';     $V_CONT2=HdrLike $vh 'content'
+if($V_SRC2 -lt 0){$V_SRC2=$V_SRC}; if($V_MED2 -lt 0){$V_MED2=$V_MED}; if($V_CAMP2 -lt 0){$V_CAMP2=$V_CAMP}; if($V_CONT2 -lt 0){$V_CONT2=$V_CONT}
+foreach($pair in @(@('Data',$V_DATE),@('Produto',$V_PROD),@('Status',$V_STAT),@('Faturamento',$V_FAT),@('Source',$V_SRC2),@('Campaign',$V_CAMP2))){ if($pair[1] -lt 0){ throw ("Vendas: coluna nao encontrada: "+$pair[0]) } }
 
 # regra de venda paga (Hotmart): APPROVED ou COMPLETED contam; refund/cancel/chargeback/expired NAO
 function IsPaid($st){ $s=Deaccent $st; return ($s -eq 'approved' -or $s -eq 'completed') }
@@ -91,13 +102,13 @@ foreach($r in $vd){
   if(-not (IsPaid $r[$V_STAT])){ $nUnpaid++; continue }
   $d = SaleDate $r[$V_DATE]; if($d -eq ''){ continue }
   $rev = MoneyBR $r[$V_FAT]
-  $src = Deaccent $r[$V_SRC]
+  $src = Deaccent (Coa $r $V_SRC2 $V_SRC)
   $isFb = ($src -eq 'facebook-ads')
   $o=_ad $d
   if($isFb){
     $o.fbSales++; $o.fbRev+=$rev
     $fbSales.Add([pscustomobject]@{ date=$d; rev=$rev
-      camp=(CleanUtm $r[$V_CAMP]); adset=(CleanUtm $r[$V_MED]); ad=(CleanUtm $r[$V_CONT]) })
+      camp=(Coa $r $V_CAMP2 $V_CAMP); adset=(Coa $r $V_MED2 $V_MED); ad=(Coa $r $V_CONT2 $V_CONT) })
   } else {
     $o.orgSales++; $o.orgRev+=$rev
   }
