@@ -87,8 +87,8 @@ $V_SRC2=HdrLike $vh 'source';     $V_MED2=HdrLike $vh 'medium';     $V_CAMP2=Hdr
 if($V_SRC2 -lt 0){$V_SRC2=$V_SRC}; if($V_MED2 -lt 0){$V_MED2=$V_MED}; if($V_CAMP2 -lt 0){$V_CAMP2=$V_CAMP}; if($V_CONT2 -lt 0){$V_CONT2=$V_CONT}
 foreach($pair in @(@('Data',$V_DATE),@('Produto',$V_PROD),@('Status',$V_STAT),@('Faturamento',$V_FAT),@('Source',$V_SRC2),@('Campaign',$V_CAMP2))){ if($pair[1] -lt 0){ throw ("Vendas: coluna nao encontrada: "+$pair[0]) } }
 
-# regra de venda paga (Hotmart): APPROVED ou COMPLETED contam; refund/cancel/chargeback/expired NAO
-function IsPaid($st){ $s=Deaccent $st; return ($s -eq 'approved' -or $s -eq 'completed') }
+# regra de venda: SO status APPROVED conta (usuario 31/07 pediu p/ IGNORAR COMPLETED)
+function IsPaid($st){ $s=Deaccent $st; return ($s -eq 'approved') }
 
 $fbSales = New-Object System.Collections.Generic.List[object]   # trafego pago (Facebook-Ads)
 $allDaily=@{}                                                   # historico completo por dia x origem
