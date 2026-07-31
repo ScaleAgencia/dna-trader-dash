@@ -129,7 +129,10 @@ $Q_LPV=HdrLike $mh '*landing page view*'; $Q_CHK=HdrLike $mh '*checkout*'
 foreach($pair in @(@('Day',$Q_DAY),@('Campaign',$Q_CAMP),@('Ad Set',$Q_SET),@('Ad',$Q_AD),@('Spend',$Q_SPEND),@('Impressions',$Q_IMP))){ if($pair[1] -lt 0){ throw ("Query: coluna nao encontrada: "+$pair[0]) } }
 
 # mapas de nome p/ atribuicao (deaccent -> nome real) + pares/triplas validas (co-localizacao)
-$campDe=@{}; $setDe=@{}; $adDe=@{}; $qPair=@{}; $qTriple=@{}
+# adToTriple/setToPair: "casa da campanha" de cada criativo nas queries. Usado como FALLBACK
+# quando a venda vem taggeada numa campanha que nao esta nas queries (mesmo AD17, outra data
+# no nome) -> atribui pelo criativo (anuncio) ou pelo conjunto, apontando pro gasto que existe.
+$campDe=@{}; $setDe=@{}; $adDe=@{}; $qPair=@{}; $qTriple=@{}; $adToTriple=@{}; $setToPair=@{}
 $qDaysSet=@{}
 foreach($r in $md){ if($r.Count -le $Q_AD){continue}
   $cn=Norm $r[$Q_CAMP]; $sn=Norm $r[$Q_SET]; $an=Norm $r[$Q_AD]
@@ -137,6 +140,8 @@ foreach($r in $md){ if($r.Count -le $Q_AD){continue}
   if($sn -ne ''){ $k=Deaccent $sn; if(-not $setDe.ContainsKey($k)){$setDe[$k]=$sn} }
   if($an -ne ''){ $k=Deaccent $an; if(-not $adDe.ContainsKey($k)){$adDe[$k]=$an} }
   if($cn -ne '' -and $sn -ne ''){ $qPair["$cn`u$sn"]=$true; if($an -ne ''){ $qTriple["$cn`u$sn`u$an"]=$true } }
+  if($an -ne '' -and $sn -ne '' -and $cn -ne ''){ $k=Deaccent $an; if(-not $adToTriple.ContainsKey($k)){ $adToTriple[$k]=@{camp=$cn;set=$sn;ad=$an} } }
+  if($sn -ne '' -and $cn -ne ''){ $k=Deaccent $sn; if(-not $setToPair.ContainsKey($k)){ $setToPair[$k]=@{camp=$cn;set=$sn} } }
 }
 
 $daily=@{}; $grain=@{}
@@ -167,13 +172,20 @@ foreach($s in $fbSales){
   $inWin++
   $o=_gd $s.date; $o.sales++; $o.rev+=$s.rev
   $cName=MatchName $s.camp $campDe
-  if($cName -eq ''){ $cName=$SENT; $sName=$SENT; $aName=$SENT }
-  else {
+  if($cName -ne ''){
+    # campanha existe nas queries -> co-localizacao normal (campanha > conjunto > anuncio)
     $sName=MatchName $s.adset $setDe
     $aName=MatchName $s.ad $adDe
     if($sName -eq '' -or -not $qPair.ContainsKey("$cName`u$sName")){ $sName=$SENT; $aName=$SENT }
     elseif($aName -eq '' -or -not $qTriple.ContainsKey("$cName`u$sName`u$aName")){ $aName=$SENT }
     $attr++
+  } else {
+    # campanha NAO esta nas queries (ex.: mesmo AD17 numa campanha nao exportada) ->
+    # fallback pelo CRIATIVO: casa o anuncio (ou o conjunto) na sua "casa" das queries
+    $adk=Deaccent $s.ad; $setk=Deaccent $s.adset
+    if($adk -ne '' -and $adToTriple.ContainsKey($adk)){ $t=$adToTriple[$adk]; $cName=$t.camp; $sName=$t.set; $aName=$t.ad; $attr++ }
+    elseif($setk -ne '' -and $setToPair.ContainsKey($setk)){ $t=$setToPair[$setk]; $cName=$t.camp; $sName=$t.set; $aName=$SENT; $attr++ }
+    else { $cName=$SENT; $sName=$SENT; $aName=$SENT }
   }
   $g=_gg "$($s.date)`u$cName`u$sName`u$aName" $s.date $cName $sName $aName; $g.sales++; $g.rev+=$s.rev
 }
