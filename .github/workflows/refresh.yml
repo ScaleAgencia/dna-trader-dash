@@ -1,0 +1,64 @@
+name: Refresh DNA Trader (3h)
+
+on:
+  schedule:
+    - cron: '17 */3 * * *'   # backup a cada 3h (minuto :17 p/ fugir do pico) - best effort
+  workflow_dispatch:          # gatilho confiavel = cron-job.org faz POST aqui
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: dna-trader-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build data.js (vendas DNA x queries Meta + ROAS/CPA)
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File .\build.ps1 -Mode all
+      - name: Commit data.js se mudou (a prova de corrida)
+        shell: powershell
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if (-not (git status --porcelain data.js)) { Write-Host "sem mudancas"; exit 0 }
+          $ok = $false
+          for ($i=0; $i -lt 5; $i++) {
+            git fetch origin main
+            git reset --soft origin/main
+            git add data.js
+            if (-not (git status --porcelain data.js)) { Write-Host "data.js igual ao origin, nada a publicar"; $ok=$true; break }
+            git commit -m ("auto: cloud " + (Get-Date -Format 'yyyy-MM-dd HH:mm'))
+            git push origin HEAD:main
+            if ($LASTEXITCODE -eq 0) { $ok=$true; break }
+            Write-Host ("push rejeitado, retry " + ($i+1) + "...")
+            Start-Sleep -Seconds 3
+          }
+          if (-not $ok) { throw "push falhou apos 5 tentativas" }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Monta _site (so arquivos publicos - sem CSV/PII)
+        run: |
+          mkdir -p _site
+          cp index.html app.js styles.css data.js .nojekyll _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

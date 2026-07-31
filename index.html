@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>DNA do Trader de Banco · Dashboard de Vendas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?t=20260731a">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="editband">Sala ao Vivo · DNA do Trader de Banco · Funil de Venda · Meta Ads</div>
+
+  <header class="top">
+    <div class="brand">
+      <svg class="blogo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs><linearGradient id="dna" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#5bf094"/><stop offset="1" stop-color="#14b452"/></linearGradient></defs>
+        <path d="M20 8 C20 20 44 26 44 34 C44 44 20 48 20 56" fill="none" stroke="url(#dna)" stroke-width="4.5" stroke-linecap="round"/>
+        <path d="M44 8 C44 20 20 26 20 34 C20 44 44 48 44 56" fill="none" stroke="url(#dna)" stroke-width="4.5" stroke-linecap="round"/>
+        <line x1="24" y1="14" x2="40" y2="14" stroke="#5bf094" stroke-width="3" stroke-linecap="round"/>
+        <line x1="21" y1="22" x2="43" y2="22" stroke="#3ad677" stroke-width="3" stroke-linecap="round"/>
+        <line x1="21" y1="42" x2="43" y2="42" stroke="#3ad677" stroke-width="3" stroke-linecap="round"/>
+        <line x1="24" y1="50" x2="40" y2="50" stroke="#5bf094" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="logo">SALA <span class="ao">AO</span> VIVO</div>
+        <div class="brand-tag"><span class="pill">DNA do Trader de Banco</span> funil de venda direta</div>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="updated">Atualizado <b id="updated">—</b><span class="live">● ao vivo</span></div>
+      <div class="periods" id="periods"></div>
+    </div>
+  </header>
+
+  <div class="coverage" id="coverage"></div>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="meta"><span class="tdot" style="background:#28d76a"></span>Meta Ads · Funil</button>
+    <button class="tab" data-tab="vendas"><span class="tdot" style="background:#f2ec12"></span>Vendas</button>
+  </nav>
+
+  <!-- ============ META ADS (cruzado) ============ -->
+  <section class="panel-tab" id="tab-meta">
+    <div class="funil-grid">
+      <div class="kpi-col" id="m-kpi"></div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-h">Funil de venda <span class="hint">Meta Ads · imposto incluso · seta = vs. período anterior</span></div>
+        <div id="m-funnel"></div>
+      </div>
+    </div>
+
+    <div class="chart-col" style="margin-bottom:16px">
+      <div class="row-2">
+        <div class="card"><div class="card-h">Vendas × Faturamento por dia</div><div id="m-chartSales"></div></div>
+        <div class="card"><div class="card-h">Investimento × ROAS por dia <span class="hint">barras = gasto c/ imposto · linha = ROAS</span></div><div id="m-chartRoas"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">💡 Insights — acelerar &amp; pausar <span class="hint">o que puxa ou derruba o retorno no período</span></div>
+      <div class="ins-grid" id="m-insights"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Visão diária <span class="hint">CPA e ROAS coloridos vs. mediana do período · mais recente no topo</span></div>
+      <div class="table-scroll"><table class="tbl" id="m-daily"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Otimização — Campanha › Conjunto › Anúncio
+        <span class="hint">métricas de funil por criativo (CTR · CPM · CPC · CPA · ROAS) · clique numa <b>campanha</b> p/ abrir os conjuntos e num <b>conjunto</b> p/ ver os anúncios · ordene por qualquer coluna</span></div>
+      <div class="tree-legend" id="m-treeLegend"></div>
+      <div class="table-scroll"><table class="tbl tree" id="m-tree"></table></div>
+    </div>
+  </section>
+
+  <!-- ============ VENDAS (histórico completo) ============ -->
+  <section class="panel-tab hidden" id="tab-vendas">
+    <div class="quad" id="v-quad"></div>
+
+    <div class="row-2">
+      <div class="card">
+        <div class="card-h">Origem das vendas <span class="hint">tráfego pago (Meta) × orgânico · no período</span></div>
+        <div id="v-split"></div>
+      </div>
+      <div class="card">
+        <div class="card-h">Comparativo por origem <span class="hint">todas as vendas do produto DNA</span></div>
+        <div class="table-scroll"><table class="tbl" id="v-cmp"></table></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Vendas por dia <span class="hint">tráfego pago × orgânico · histórico completo</span></div>
+      <div id="v-chart"></div>
+    </div>
+
+    <div class="row-2">
+      <div class="card">
+        <div class="card-h">Ranking por campanha <span class="hint">Meta Ads · atribuído por UTM · histórico completo</span></div>
+        <div class="table-scroll"><table class="tbl" id="v-camp"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-h">Ranking por anúncio <span class="hint">Meta Ads · atribuído por UTM · histórico completo</span></div>
+        <div class="table-scroll"><table class="tbl" id="v-ad"></table></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Visão diária — todas as vendas <span class="hint">mais recente no topo</span></div>
+      <div class="table-scroll"><table class="tbl" id="v-daily"></table></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>DNA do Trader de Banco · dados agregados, somente leitura · imposto Meta ×<b id="taxf">1,1385</b> incluso no investimento e nas métricas · faturamento = valor líquido da venda · vendas de tráfego pago atribuídas por UTM (campanha, conjunto e criativo) · cruzamento Meta × vendas só a partir do início das queries</span>
+  </footer>
+</div>
+
+<script src="data.js?t=20260731a"></script>
+<script src="app.js?t=20260731a"></script>
+</body>
+</html>
